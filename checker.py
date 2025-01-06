@@ -47,7 +47,7 @@ class Pinger:
             self.connected = True
 
     def ping(self):
-        if platform == "windows":
+        if platform == "win32":
             self._ping_windows()
         else:
             self._ping_linux()
@@ -57,7 +57,7 @@ class Pinger:
 
 
 def play_alarm_sound():
-    if platform == "windows":
+    if platform == "win32":
         import winsound
         winsound.PlaySound("alarm.wav", winsound.SND_FILENAME)
     elif platform == "linux":
