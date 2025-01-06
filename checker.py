@@ -1,5 +1,6 @@
 import subprocess
-import winsound
+from sys import platform
+import os
 from threading import Thread
 
 default_adresses = ["1.1.1.1", "2.2.4.4", "8.8.8.8"]
@@ -11,7 +12,7 @@ class Pinger:
         self.count = count
         self.connected = False
 
-    def ping(self):
+    def _ping_windows(self):
         process = subprocess.run(["ping", default_adresses[0], "-n", str(self.count)], capture_output=True)
         packet_array = process.stdout.decode("utf-8").split("\r\n")
         packet_string = ""
@@ -29,12 +30,38 @@ class Pinger:
         else:
             self.connected = True
 
+    def _ping_linux(self):
+        process = subprocess.run(["ping", "-c", str(self.count), default_adresses[0], "-q"], capture_output=True)
+        packet_array = process.stdout.decode("utf-8").split("\n")
+        summary_line = ""
+        for line in packet_array:
+            if "packets transmitted" in line:
+                summary_line = line
+                break
+        split_summary = summary_line.split(",")
+        received = int(split_summary[1].strip().split(" ")[0])
+        lost_packets = self.count - received
+        if lost_packets / (1.0 * self.count) > maximum_failed_share:
+            self.connected = False
+        else:
+            self.connected = True
+
+    def ping(self):
+        if platform == "windows":
+            self._ping_windows()
+        else:
+            self._ping_linux()
+
     def is_connected(self):
         return self.connected
 
 
 def play_alarm_sound():
-    winsound.PlaySound("alarm.wav", winsound.SND_FILENAME)
+    if platform == "windows":
+        import winsound
+        winsound.PlaySound("alarm.wav", winsound.SND_FILENAME)
+    elif platform == "linux":
+        os.system('aplay alarm.wav')
 
 pingers = []
 for address in default_adresses:
